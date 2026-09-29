@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KKU Helmet Hero | สวมหมวกกันน็อก ปลอดภัย ได้ลุ้นโชค (ระบบเกลือ 80% & กาชารางวัลใหญ่)</title>
+  <!-- Google Fonts: Prompt & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & Babel Standalone -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Prompt', 'Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Prompt', 'Inter', sans-serif;
+      background-color: #FAFAF9;
+      color: #1E293B;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-[#FAFAF9] text-[#1E293B] antialiased">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // --- Sound Effects Synthesizer with Salt Sound ---
+    class SoundEffects {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx && typeof window !== "undefined") {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
+      }
+      playTick(pitchMultiplier = 1) {
+        if (!this.enabled) return;
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(440 * pitchMultiplier, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.04);
+          gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.04);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.04);
+        } catch(e) {}
+      }
+      playSuccess() {
+        if (!this.enabled) return;
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+          [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = "triangle";
+            osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+            gain.gain.setValueAtTime(0.12, now + idx * 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.3);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + idx * 0.08);
+            osc.stop(now + idx * 0.08 + 0.35);
+          });
+        } catch(e) {}
+      }
+      playFanfare() {
+        if (!this.enabled) return;
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+          const chords = [
+            { freqs: [523.25, 659.25, 783.99], time: 0, dur: 0.18 },
+            { freqs: [523.25, 659.25, 783.99], time: 0.2, dur: 0.18 },
+            { freqs: [523.25, 659.25, 783.99], time: 0.4, dur: 0.18 },
+            { freqs: [659.25, 830.61, 1046.50], time: 0.65, dur: 0.8 },
+          ];
+          chords.forEach(({ freqs, time, dur }) => {
+            freqs.forEach(freq => {
+              const osc = this.ctx.createOscillator();
+              const gain = this.ctx.createGain();
+              osc.type = "sine";
+              osc.frequency.setValueAtTime(freq, now + time);
+              gain.gain.setValueAtTime(0.15, now + time);
+              gain.gain.exponentialRampToValueAtTime(0.001, now + time + dur);
+              osc.connect(gain);
+              gain.connect(this.ctx.destination);
+              osc.start(now + time);
+              osc.stop(now + time + dur + 0.05);
+            });
+          });
+        } catch(e) {}
+      }
+      playSaltSound() {
+        if (!this.enabled) return;
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+          const notes = [
+            { freq: 293.66, time: 0, dur: 0.3 },
+            { freq: 277.18, time: 0.32, dur: 0.3 },
+            { freq: 261.63, time: 0.64, dur: 0.3 },
+            { freq: 246.94, time: 0.98, dur: 0.8 }
+          ];
+          notes.forEach(({ freq, time, dur }, index) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = "sawtooth";
+            osc.frequency.setValueAtTime(freq, now + time);
+            if (index === 3) {
+              osc.frequency.exponentialRampToValueAtTime(220.00, now + time + dur);
+            }
+            gain.gain.setValueAtTime(0.11, now + time);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + time + dur);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + time);
+            osc.stop(now + time + dur + 0.05);
+          });
+        } catch(e) {}
+      }
+    }
+    const sound = new SoundEffects();
+
+    // --- KKU Crest Component ---
+    function KkuLogo({ className = "w-10 h-10" }) {
+      return (
+        <div className={`relative flex items-center justify-center flex-shrink-0 ${className}`}>
+          <div className="w-full h-full rounded-2xl bg-gradient-to-br from-[#9E2A2B] to-[#731E20] flex items-center justify-center shadow-md border-2 border-amber-400">
+            <svg viewBox="0 0 100 100" className="w-4/5 h-4/5 text-amber-300" fill="currentColor">
+              <path d="M50 8 L54 22 L46 22 Z" fill="#FACC15" />
+              <circle cx="50" cy="7" r="2.5" fill="#FEF08A" />
+              <path d="M44 23 L56 23 L59 40 L41 40 Z" fill="#FDE047" opacity="0.95" />
+              <path d="M47 28 Q50 25 53 28 Q50 31 47 28 Z" fill="#9E2A2B" />
+              <path d="M38 41 L62 41 L67 60 L33 60 Z" fill="#EAB308" />
+              <circle cx="50" cy="50" r="5" fill="#9E2A2B" />
+              <path d="M30 61 C30 61, 38 68, 50 68 C62 68, 70 61, 70 61 L74 72 C74 72, 63 76, 50 76 C37 76, 26 72, 26 72 Z" fill="#CA8A04" />
+              <rect x="22" y="73" width="56" height="6" rx="2" fill="#FACC15" />
+              <rect x="18" y="80" width="64" height="6" rx="2" fill="#EAB308" />
+              <text x="50" y="93" fontSize="8" fontWeight="900" textAnchor="middle" fill="#FEF08A" fontFamily="Prompt, sans-serif">KKU</text>
+            </svg>
+          </div>
+        </div>
+      );
+    }
+
+    // --- Brand Badge Component ---
+    function BrandBadge({ brand }) {
+      if (brand === "Nintendo") return <div className="w-10 h-10 bg-[#E60012] text-white font-black flex items-center justify-center rounded-xl text-lg select-none">🎮</div>;
+      if (brand === "Keychron") return <div className="w-10 h-10 bg-stone-800 text-amber-400 font-black flex items-center justify-center rounded-xl text-xs font-mono select-none">⌨️</div>;
+      if (brand === "Bandai Gunpla") return <div className="w-10 h-10 bg-[#E60012] text-white font-black flex flex-col items-center justify-center rounded-xl text-[9px] leading-tight select-none"><span className="text-amber-200 text-[8px]">HG</span><span>BANDAI</span></div>;
+      if (brand === "Uniqlo") return <div className="w-10 h-10 bg-[#ED1D24] text-white font-bold flex flex-col items-center justify-center rounded-xl text-[9px] leading-none select-none"><span>UNI</span><span>QLO</span></div>;
+      if (brand === "KFC") return <div className="w-10 h-10 bg-[#DC2626] text-white font-black italic flex items-center justify-center rounded-xl text-xs select-none">KFC</div>;
+      if (brand === "Starbucks") return <div className="w-10 h-10 bg-[#006241] text-white flex items-center justify-center rounded-full text-sm select-none border-2 border-white/40">☕</div>;
+      if (brand === "Xiaomi") return <div className="w-10 h-10 bg-[#FF6900] text-white font-black flex items-center justify-center rounded-xl text-xs select-none">mi</div>;
+      if (brand === "After You") return <div className="w-10 h-10 bg-[#5D4037] text-amber-200 font-bold flex items-center justify-center rounded-xl text-[10px] select-none">🍨 AY</div>;
+      if (brand === "Tao Bin") return <div className="w-10 h-10 bg-[#105B3A] text-amber-300 font-bold flex flex-col items-center justify-center rounded-xl text-[9px] select-none leading-none"><span>เต่า</span><span>บิน</span></div>;
+      if (brand === "Major Cineplex") return <div className="w-10 h-10 bg-gradient-to-tr from-amber-600 to-red-600 text-white font-black flex items-center justify-center rounded-xl text-sm select-none">🎬</div>;
+      if (brand === "Shopee") return <div className="w-10 h-10 bg-[#EE4D2D] text-white font-black flex items-center justify-center rounded-xl text-xs select-none">🛍️</div>;
+      if (brand === "Grab") return <div className="w-10 h-10 bg-[#00B14F] text-white font-black italic flex items-center justify-center rounded-xl text-xs select-none">Grab</div>;
+      if (brand === "เกลือแท้" || brand === "เกลือ") return <div className="w-10 h-10 bg-stone-200 text-stone-700 font-black flex items-center justify-center rounded-xl text-sm select-none border border-stone-300">🧂</div>;
+      return <div className="w-10 h-10 bg-amber-400 text-stone-950 flex items-center justify-center rounded-xl text-sm select-none font-bold">🛡️</div>;
+    }
+
+    // --- Mock Data ---
+    const FACULTIES = [
+      "วิทยาลัยการคอมพิวเตอร์ (College of Computing)",
+      "คณะวิศวกรรมศาสตร์",
+      "คณะวิทยาศาสตร์",
+      "คณะแพทยศาสตร์",
+      "คณะบริหารธุรกิจและการบัญชี (KKBS)",
+      "คณะมนุษยศาสตร์และสังคมศาสตร์",
+      "คณะเทคโนโลยี",
+      "คณะสถาปัตยกรรมศาสตร์",
+      "คณะพยาบาลศาสตร์",
+      "คณะนิติศาสตร์"
+    ];
+
+    const INITIAL_STUDENTS = [
+      {
+        id: "683380123-4",
+        name: "ปฏิวัติ ทำงานจีอี",
+        faculty: "วิทยาลัยการคอมพิวเตอร์ (College of Computing)",
+        major: "วิทยาการคอมพิวเตอร์ (CS)",
+        tickets: 5,
+        totalEarned: 7,
+        verified: true,
+        lastCheckIn: "วันนี้ 08:30 น. (ประตูมอดินแดง)",
+        avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=150&q=80",
+        helmetType: "เต็มใบสปอร์ต มอก."
+      },
+      {
+        id: "683380456-7",
+        name: "จิราพร โค้ดคลีน",
+        faculty: "วิทยาลัยการคอมพิวเตอร์ (College of Computing)",
+        major: "เทคโนโลยีสารสนเทศ (IT)",
+        tickets: 4,
+        totalEarned: 5,
+        verified: true,
+        lastCheckIn: "วันนี้ 09:15 น. (ประตูศรีฐาน)",
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
+        helmetType: "เปิดหน้าวินเทจครีม มอก."
+      },
+      {
+        id: "683380789-0",
+        name: "กฤษณะ ฐานข้อมูล",
+        faculty: "วิทยาลัยการคอมพิวเตอร์ (College of Computing)",
+        major: "ปัญญาประดิษฐ์ประยุกต์ (AI)",
+        tickets: 6,
+        totalEarned: 8,
+        verified: true,
+        lastCheckIn: "เมื่อวาน 16:40 น. (หน้าตึก CP)",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
+        helmetType: "เต็มใบวิบาก มอก."
+      },
+      {
+        id: "683380234-5",
+        name: "ชนัญชิดา แคลคูลัส",
+        faculty: "วิทยาลัยการคอมพิวเตอร์ (College of Computing)",
+        major: "ความมั่นคงไซเบอร์ (Cybersecurity)",
+        tickets: 3,
+        totalEarned: 4,
+        verified: true,
+        lastCheckIn: "วันนี้ 10:10 น. (ประตู 1 มข.)",
+        avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=150&q=80",
+        helmetType: "เปิดหน้าพาสเทล มินิมอล"
+      },
+      {
+        id: "673040112-3",
+        name: "ธนดล ไบค์เกอร์มข.",
+        faculty: "คณะวิศวกรรมศาสตร์",
+        major: "วิศวกรรมยานยนต์",
+        tickets: 7,
+        totalEarned: 9,
+        verified: true,
+        lastCheckIn: "วันนี้ 11:05 น. (ประตูมอดินแดง)",
+        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",
+        helmetType: "เต็มใบเรซซิ่ง มอก."
+      }
+    ];
+
+    const INITIAL_PRIZES = [
+      {
+        id: "prize-nintendo-switch",
+        tier: "SSR",
+        brand: "Nintendo",
+        name: "Nintendo Switch OLED Model",
+        value: 14990,
+        unit: "บาท",
+        remaining: 1,
+        total: 1,
+        tag: "Jackpot SSR",
+        description: "เครื่องเกมคอนโซลยอดนิยม จอภาพ OLED 7 นิ้ว คมชัด พกพาเล่นกับเพื่อนๆ ใน มข. ได้ทุกที่",
+        image: "https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?auto=format&fit=crop&w=600&q=80"
+      },
+      {
+        id: "prize-keychron-k2",
+        tier: "SSR",
+        brand: "Keychron",
+        name: "Keychron K2 Wireless Mechanical Keyboard",
+        value: 3890,
+        unit: "บาท",
+        remaining: 2,
+        total: 2,
+        tag: "SSR สายโค้ด",
+        description: "คีย์บอร์ดกลไกไร้สาย เชื่อมต่อ Bluetooth / Type-C ขวัญใจโปรแกรมเมอร์ มข.",
+        image: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=600&q=80"
+      },
+      {
+        id: "prize-gunpla-mg-barbatos",
+        tier: "SSR",
+        brand: "Bandai Gunpla",
+        name: "Gunpla MG 1/100 Gundam Barbatos",
+        value: 1850,
+        unit: "บาท",
+        remaining: 2,
+        total: 2,
+        tag: "SSR Master Grade",
+        description: "กันพลาเกรด Master Grade โครงในเหล็ก Gundam Frame รายละเอียดสูง ลิขสิทธิ์แท้ Bandai",
+        image: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=600&q=80"
+      },
+      {
+        id: "prize-gunpla",
+        tier: "SR",
+        brand: "Bandai Gunpla",
+        name: "Gunpla HG 1/144 Rising Freedom Gundam",
+        value: 950,
+        unit: "บาท",
+        remaining: 3,
+        total: 5,
+        tag: "Weekly Highlight",
+        description: "กันพลาของแท้จาก Bandai Spirits ญี่ปุ่น กล่องแท้ Bandai Namco ขวัญใจสายบิลด์ มข.",
+        image: "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=600&q=80"
+      },
+      {
+        id: "prize-gunpla-calibarn",
+        tier: "SR",
+        brand: "Bandai Gunpla",
+        name: "Gunpla HG 1/144 Gundam Calibarn",
+        value: 900,
+        unit: "บาท",
+        remaining: 3,
+        total: 4,
+        tag: "Weekly Highlight",
+        description: "หุ่นตัวเอกจากซีรีส์แม่มดดาวพุธ ปืนกวาดหลัง Broom Rifle เอฟเฟกต์รุ้งใสสวยสะกดใจ",
+        image: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80"
+      },
+      {
+        id: "prize-uniqlo",
+        tier: "SR",
+        brand: "Uniqlo",
+        name: "Uniqlo Gift Voucher 1,000 บาท",
+        value: 1000,
+        unit: "บาท",
+        remaining: 4,
+        total: 6,
+        tag: "Weekly Highlight",
+        description: "บัตรกำนัลช้อปปิ้งเสื้อผ้ามินิมอลคุณภาพระดับโลก ใช้ได้ที่ Uniqlo สาขาเซ็นทรัล ขอนแก่น",
+        image: "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&w=600&q=80"
+      },
+      {
+        id: "prize-helmet",
+        tier: "SR",
+        brand: "SafeRide KKU",
+        name: "หมวกกันน็อกเต็มใบ มาตรฐาน มอก. 369-2557",
+        value: 1490,
+        unit: "บาท",
+        remaining: 2,
+        total: 3,
+        tag: "Weekly Highlight",
+        description: "หมวกนิรภัยเต็มใบมาตรฐาน มอก. ลายพิเศษ KKU Safe Ride ปกป้องสูงสุดทุกเส้นทางใน มข.",
+        image: "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=600&q=80"
+      },
+      {
+        id: "prize-kfc",
+        tier: "R",
+        brand: "KFC",
+        name: "KFC E-Voucher 500 บาท",
+        value: 500,
+        unit: "บาท",
+        remaining: 8,
+        total: 10,
+        tag: "Weekly Highlight",
+        description: "คูปองความอร่อยกับไก่ทอดสูตรผู้พันยอดฮิต อิ่มอร่อยกับเพื่อนๆ ที่ KFC คอมเพล็กซ์ มข.",
+        image: "https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=600&q=80"
+      },
+      {
+        id: "prize-starbucks",
+        tier: "R",
+        brand: "Starbucks",
+        name: "Starbucks Card 300 บาท",
+        value: 300,
+        unit: "บาท",
+        remaining: 12,
+        total: 15,
+        tag: "Weekly Highlight",
+        description: "เติมความสดชื่นก่อนเข้าคลาสแล็บเขียนโค้ด ที่ Starbucks ศูนย์อาหารและบริการ มข.",
+        image: "https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&w=600&q=80"
+      },
+      {
+        id: "prize-after-you",
+        tier: "R",
+        brand: "After You",
+        name: "After You Dessert Cafe 500 บาท",
+        value: 500,
+        unit: "บาท",
+        remaining: 5,
+        total: 5,
+        tag: "ของหวาน",
+        description: "ชิบูย่าฮันนี่โทสต์และคากิโกริสุดฟิน ที่ After You เซ็นทรัล ขอนแก่น",
+        image: "https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=600&q=80"
+      },
+      {
+        id: "prize-taobin",
+        tier: "R",
+        brand: "Tao Bin",
+        name: "เต่าบิน 300 บาท (กดได้ 10 แก้วใน มข.)",
+        value: 300,
+        unit: "บาท",
+        remaining: 15,
+        total: 20,
+        tag: "เครื่องดื่ม",
+        description: "เครื่องดื่มชงสด 24 ชม. ทุกตู้ใน มข. ใต้ตึกคอมพิวเตอร์และหอพัก",
+        image: "https://images.unsplash.com/photo-1517256064527-09c73fc73e38?auto=format&fit=crop&w=600&q=80"
+      }
+    ];
+
+    const SALT_ITEMS = [
+      {
+        id: "salt-1",
+        name: "เกลือบริสุทธิ์ตราปรุงทิพย์ 🧂",
+        tag: "ความเค็มแท้ 100%",
+        meme: "เค็มเข้มข้นจนไตถามหา! ได้รับความเค็มระดับตำนาน อุดมด้วยไอโอดีนป้องกันโรคคอพอก 100%",
+        consolation: "แต้มปลอบใจ: ได้รับ 1 เกล็ดเกลือสะสม 🧂"
+      },
+      {
+        id: "salt-2",
+        name: "แต้มบุญความปลอดภัยในการขับขี่ +999 🛡️",
+        tag: "บัฟความปลอดภัย",
+        meme: "แคล้วคลาดปลอดภัยตลอดสัปดาห์ ไม่โดนตำรวจจราจรเรียกตรวจที่หน้าประตูมอดินแดง",
+        consolation: "แต้มปลอบใจ: ได้รับความแคล้วคลาด +999 🛡️"
+      },
+      {
+        id: "salt-3",
+        name: "คำอวยพรเกรด A จากอาจารย์วิทยาลัยการคอมพิวเตอร์ 💻",
+        tag: "บัฟการเรียน",
+        meme: "โค้ดคอมไพล์ผ่านฉลุยในเทสเดียว บั๊กหายวับ โปรเจกต์เสร็จทันเดดไลน์แน่นอน",
+        consolation: "แต้มปลอบใจ: โค้ด Error ลดลง 50% 💻"
+      },
+      {
+        id: "salt-4",
+        name: "กาแฟทิพย์และกำลังใจปั่นโปรเจกต์ดึกที่ตึก CP ☕",
+        tag: "พลังงานใจ",
+        meme: "นอนเร็วคือคนแพ้ กาแฟคือเพื่อนแท้ แก้งานจนฟ้าสางที่แล็บวิทยาลัยการคอมพิวเตอร์",
+        consolation: "แต้มปลอบใจ: พลังใจปั่นโค้ด +100 ☕"
+      },
+      {
+        id: "salt-5",
+        name: "สติกเกอร์ไลน์น้องมอดินแดงสุดคิวท์ 🐾",
+        tag: "ความน่ารัก",
+        meme: "เอาไว้ส่งในกลุ่มทำงานจีอี เพื่อบอกเพื่อนๆ ในกลุ่มว่า 'เรายังสู้ไหวอยู่จ้า'",
+        consolation: "แต้มปลอบใจ: ความคิวท์ +10 🐾"
+      },
+      {
+        id: "salt-6",
+        name: "คำขอบคุณและรอยยิ้มจากพี่วิน มข. 🙏",
+        tag: "มิตรภาพ มข.",
+        meme: "ขอบคุณน้องที่สวมหมวกนิรภัยเข้า มข. ทุกวัน ขับขี่ปลอดภัยทุกคนสบายใจ",
+        consolation: "แต้มปลอบใจ: รอยยิ้มอบอุ่นชาว มข. 😊"
+      },
+      {
+        id: "salt-7",
+        name: "อากาศบริสุทธิ์ยามเย็นริมบึงศรีฐาน มข. 🍃",
+        tag: "ฟอกปอด",
+        meme: "สูดความเค็มให้เต็มปอด แล้วไปวิ่งออกกำลังกายรอบบึงศรีฐานคลายเครียด",
+        consolation: "แต้มปลอบใจ: อากาศบริสุทธิ์ 1 ปอด 🍃"
+      }
+    ];
+
+    const INITIAL_WINNERS = [
+      {
+        id: "win-1",
+        studentId: "683380456-7",
+        studentName: "จิราพร โค้ดคลีน",
+        faculty: "วิทยาลัยการคอมพิวเตอร์ (College of Computing)",
+        prizeBrand: "Starbucks",
+        prizeName: "Starbucks Card 300 บาท",
+        date: "28 ก.ย. 2026 - 15:30 น.",
+        round: "สัปดาห์ที่ 3",
+        status: "รับรางวัลแล้ว ✅"
+      },
+      {
+        id: "win-2",
+        studentId: "673040112-3",
+        studentName: "ธนดล ไบค์เกอร์มข.",
+        faculty: "คณะวิศวกรรมศาสตร์",
+        prizeBrand: "KFC",
+        prizeName: "KFC E-Voucher 500 บาท",
+        date: "25 ก.ย. 2026 - 16:45 น.",
+        round: "สัปดาห์ที่ 3",
+        status: "รับรางวัลแล้ว ✅"
+      },
+      {
+        id: "win-3",
+        studentId: "683380123-4",
+        studentName: "ปฏิวัติ ทำงานจีอี",
+        faculty: "วิทยาลัยการคอมพิวเตอร์ (College of Computing)",
+        prizeBrand: "Bandai Gunpla",
+        prizeName: "Gunpla HG 1/144 Rising Freedom Gundam",
+        date: "21 ก.ย. 2026 - 12:10 น.",
+        round: "สัปดาห์ที่ 2",
+        status: "รับรางวัลแล้ว ✅"
+      }
+    ];
+
+    // --- Main App Component ---
+    function App() {
+      const [activeTab, setActiveTab] = useState('entry');
+      const [soundEnabled, setSoundEnabled] = useState(true);
+
+      const [students, setStudents] = useState(() => {
+        try {
+          const saved = localStorage.getItem('kku_safe_ride_students_v3');
+          return saved ? JSON.parse(saved) : INITIAL_STUDENTS;
+        } catch { return INITIAL_STUDENTS; }
+      });
+
+      const [prizes, setPrizes] = useState(() => {
+        try {
+          const saved = localStorage.getItem('kku_safe_ride_prizes_v3');
+          return saved ? JSON.parse(saved) : INITIAL_PRIZES;
+        } catch { return INITIAL_PRIZES; }
+      });
+
+      const [winners, setWinners] = useState(() => {
+        try {
+          const saved = localStorage.getItem('kku_safe_ride_winners_v3');
+          return saved ? JSON.parse(saved) : INITIAL_WINNERS;
+        } catch { return INITIAL_WINNERS; }
+      });
+
+      const [selectedPrizeId, setSelectedPrizeId] = useState(INITIAL_PRIZES[0].id);
+      const [recentWinner, setRecentWinner] = useState(null);
+      const [recentPrize, setRecentPrize] = useState(null);
+      const [recentSalt, setRecentSalt] = useState(null);
+      const [recentSaltStudent, setRecentSaltStudent] = useState(null);
+      const [toast, setToast] = useState(null);
+
+      // Form state
+      const [studentId, setStudentId] = useState('');
+      const [fullName, setFullName] = useState('');
+      const [faculty, setFaculty] = useState("วิทยาลัยการคอมพิวเตอร์ (College of Computing)");
+      const [existingUserPrompt, setExistingUserPrompt] = useState(null);
+
+      // Lucky Draw State
+      const [isDrawing, setIsDrawing] = useState(false);
+      const [currentDisplayStudent, setCurrentDisplayStudent] = useState(null);
+      const [guaranteeWinMode, setGuaranteeWinMode] = useState(false);
+
+      // Prize Filter
+      const [selectedTier, setSelectedTier] = useState('ALL');
+
+      // Search state
+      const [searchQuery, setSearchQuery] = useState('');
+      const [selectedFacultyFilter, setSelectedFacultyFilter] = useState('ALL');
+      const [activeSubTab, setActiveSubTab] = useState('students');
+
+      useEffect(() => {
+        try { localStorage.setItem('kku_safe_ride_students_v3', JSON.stringify(students)); } catch(e){}
+      }, [students]);
+      useEffect(() => {
+        try { localStorage.setItem('kku_safe_ride_prizes_v3', JSON.stringify(prizes)); } catch(e){}
+      }, [prizes]);
+      useEffect(() => {
+        try { localStorage.setItem('kku_safe_ride_winners_v3', JSON.stringify(winners)); } catch(e){}
+      }, [winners]);
+      useEffect(() => {
+        sound.enabled = soundEnabled;
+      }, [soundEnabled]);
+
+      const showToast = (message) => {
+        setToast(message);
+        setTimeout(() => setToast(prev => prev === message ? null : prev), 4500);
+      };
+
+      const totalActiveTickets = useMemo(() => {
+        return students.reduce((acc, curr) => acc + (curr.tickets || 0), 0);
+      }, [students]);
+
+      const activePrize = useMemo(() => {
+        return prizes.find(p => p.id === selectedPrizeId) || prizes[0];
+      }, [prizes, selectedPrizeId]);
+
+      const [selectedStudentId, setSelectedStudentId] = useState('');
+      const [displayItem, setDisplayItem] = useState(null);
+
+      const eligibleStudents = useMemo(() => {
+        return students.filter(s => s.tickets > 0);
+      }, [students]);
+
+      useEffect(() => {
+        const current = students.find(s => s.id === selectedStudentId);
+        if (!current || current.tickets <= 0) {
+          if (eligibleStudents.length > 0) setSelectedStudentId(eligibleStudents[0].id);
+          else setSelectedStudentId('');
+        }
+      }, [students, eligibleStudents, selectedStudentId]);
+
+      const activeStudent = useMemo(() => {
+        return students.find(s => s.id === selectedStudentId);
+      }, [students, selectedStudentId]);
+
+      const allReelItems = useMemo(() => {
+        return [
+          ...prizes.map(p => ({ type: 'prize', id: p.id, name: p.name, brand: p.brand, value: p.value, unit: p.unit, tier: p.tier || 'SR', image: p.image, raw: p })),
+          ...SALT_ITEMS.map(s => ({ type: 'salt', id: s.id, name: s.name, brand: s.brand || 'เกลือแท้', value: 0, unit: '', tier: 'SALT', image: 'https://images.unsplash.com/photo-1518110925495-5fe2fda0442c?auto=format&fit=crop&w=500&q=80', tag: s.tag, meme: s.meme, consolation: s.consolation, raw: s }))
+        ];
+      }, [prizes]);
+
+      useEffect(() => {
+        if (!displayItem && allReelItems.length > 0) {
+          setDisplayItem(allReelItems[0]);
+        }
+      }, [allReelItems, displayItem]);
+
+      const handleAddEntry = (e) => {
+        e.preventDefault();
+        if (!studentId.trim() || !fullName.trim()) {
+          alert("กรุณากรอกรหัสนักศึกษาและชื่อ-นามสกุลให้ครบถ้วน");
+          return;
+        }
+
+        const existingIndex = students.findIndex((s) => s.id === studentId.trim());
+        let updatedTickets = 1;
+        const now = new Date();
+        const timeStr = `วันนี้ ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')} น. (จุดคัดกรอง มข.)`;
+
+        if (existingIndex >= 0) {
+          const updated = [...students];
+          const curr = updated[existingIndex];
+          updatedTickets = curr.tickets + 1;
+          updated[existingIndex] = {
+            ...curr,
+            name: fullName.trim(),
+            faculty,
+            tickets: updatedTickets,
+            totalEarned: (curr.totalEarned || curr.tickets) + 1,
+            lastCheckIn: timeStr,
+          };
+          setStudents(updated);
+        } else {
+          const newStudent = {
+            id: studentId.trim(),
+            name: fullName.trim(),
+            faculty,
+            tickets: 1,
+            totalEarned: 1,
+            verified: true,
+            lastCheckIn: timeStr,
+            avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
+            helmetType: "หมวกนิรภัยมาตรฐาน มอก."
+          };
+          setStudents([newStudent, ...students]);
+          updatedTickets = 1;
+        }
+
+        if (window.confetti) {
+          window.confetti({
+            particleCount: 50,
+            spread: 60,
+            origin: { y: 0.8 },
+            colors: ['#FACC15', '#F59E0B', '#10B981', '#E60012']
+          });
+        }
+        sound.playSuccess();
+        showToast(`🎉 บันทึกสำเร็จ! คุณ${fullName.trim()} (${studentId.trim()}) ได้รับ 1 สิทธิ์ (มีสิทธิ์สะสม ${updatedTickets} สิทธิ์)`);
+      };
+
+      const handleQuickAdd = (sId) => {
+        const student = students.find(s => s.id === sId);
+        if (!student) return;
+        setStudents(prev => prev.map(s => s.id === sId ? { ...s, tickets: s.tickets + 1, totalEarned: (s.totalEarned || s.tickets) + 1 } : s));
+        if (window.confetti) window.confetti({ particleCount: 30, spread: 50, origin: { y: 0.85 } });
+        sound.playSuccess();
+        showToast(`✨ เพิ่ม 1 สิทธิ์ให้คุณ${student.name} เรียบร้อยแล้ว!`);
+      };
+
+      // Gacha Item Draw: Spins through prizes and salts!
+      const handleStartDraw = () => {
+        if (!activeStudent || activeStudent.tickets <= 0) {
+          alert("กรุณาเลือกนักศึกษาที่มีสิทธิ์สะสมคงเหลือ (สิทธิ์ > 0) ก่อนเริ่มสุ่ม");
+          return;
+        }
+
+        setIsDrawing(true);
+        const randomChance = Math.random();
+        const isWin = guaranteeWinMode ? true : randomChance < 0.20;
+
+        let targetItem;
+        if (isWin) {
+          const avail = prizes.filter(p => p.remaining > 0);
+          const chosenPrize = avail.length > 0 ? avail[Math.floor(Math.random() * avail.length)] : prizes[0];
+          targetItem = { type: 'prize', raw: chosenPrize, ...chosenPrize };
+        } else {
+          const chosenSalt = SALT_ITEMS[Math.floor(Math.random() * SALT_ITEMS.length)];
+          targetItem = { type: 'salt', raw: chosenSalt, ...chosenSalt, tier: 'SALT' };
+        }
+
+        let speed = 40;
+        let elapsed = 0;
+        const totalDuration = 3400;
+
+        const rollStep = () => {
+          const rand = allReelItems[Math.floor(Math.random() * allReelItems.length)];
+          setDisplayItem(rand);
+          sound.playTick(0.85 + Math.random() * 0.45);
+
+          elapsed += speed;
+          if (elapsed > 2300) speed += 32;
+          else if (elapsed > 1200) speed += 12;
+
+          if (elapsed < totalDuration) {
+            setTimeout(rollStep, speed);
+          } else {
+            setDisplayItem(targetItem);
+            setIsDrawing(false);
+
+            // Deduct 1 ticket from active student
+            setStudents(prev => prev.map(s => s.id === activeStudent.id ? { ...s, tickets: Math.max(0, s.tickets - 1) } : s));
+
+            if (isWin) {
+              setPrizes(prev => prev.map(p => p.id === targetItem.id ? { ...p, remaining: Math.max(0, p.remaining - 1) } : p));
+              sound.playFanfare();
+
+              const now = new Date();
+              const thaiDate = `${now.getDate()} ก.ย. 2026 - ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')} น.`;
+              const newWinnerRecord = {
+                id: `win-${Date.now()}`,
+                studentId: activeStudent.id,
+                studentName: activeStudent.name,
+                faculty: activeStudent.faculty,
+                prizeBrand: targetItem.brand,
+                prizeName: targetItem.name,
+                date: thaiDate,
+                round: "สัปดาห์นี้",
+                status: "รับรางวัลแล้ว ✅"
+              };
+              setWinners(prev => [newWinnerRecord, ...prev]);
+              setRecentWinner(activeStudent);
+              setRecentPrize(targetItem.raw || targetItem);
+            } else {
+              sound.playSaltSound();
+              setRecentSalt(targetItem.raw || targetItem);
+              setRecentSaltStudent(activeStudent);
+            }
+          }
+        };
+        rollStep();
+      };
+              setWinners(prev => [newWinnerRecord, ...prev]);
+              setRecentWinner(chosenStudent);
+              setRecentPrize(activePrize);
+            } else {
+              // 80% SALT!
+              const randomSalt = SALT_ITEMS[Math.floor(Math.random() * SALT_ITEMS.length)];
+              sound.playSaltSound();
+              setRecentSalt(randomSalt);
+              setRecentSaltStudent(chosenStudent);
+            }
+          }
+        };
+        rollStep();
+      };
+
+      const filteredPrizes = prizes.filter(p => selectedTier === 'ALL' || p.tier === selectedTier);
+
+      const filteredStudents = useMemo(() => {
+        return students.filter(s => {
+          const matchSearch = s.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              s.faculty.toLowerCase().includes(searchQuery.toLowerCase());
+          const matchFac = selectedFacultyFilter === 'ALL' || s.faculty === selectedFacultyFilter;
+          return matchSearch && matchFac;
+        }).sort((a,b) => b.tickets - a.tickets);
+      }, [students, searchQuery, selectedFacultyFilter]);
+
+      return (
+        <div className="min-h-screen flex flex-col bg-[#FAFAF9] text-[#1E293B]">
+          
+          {/* Toast */}
+          {toast && (
+            <div className="fixed top-20 right-4 z-50 animate-bounce">
+              <div className="bg-stone-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-amber-400 text-xs sm:text-sm font-medium">
+                <span className="text-amber-400">✨</span>
+                <span>{toast}</span>
+                <button onClick={() => setToast(null)} className="ml-2 text-stone-400 hover:text-white">✕</button>
+              </div>
+            </div>
+          )}
+
+          {/* Header / Navbar */}
+          <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-stone-200">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between h-20">
+                
+                <div onClick={() => setActiveTab('entry')} className="flex items-center gap-3.5 cursor-pointer select-none">
+                  <KkuLogo className="w-12 h-12" />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-lg sm:text-xl text-stone-900">KKU Helmet Hero</span>
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">เกลือ 80% / รางวัล 20%</span>
+                    </div>
+                    <span className="text-xs text-stone-500 font-medium">มหาวิทยาลัยขอนแก่น • สวมหมวกกันน็อก ปลอดภัย ได้ลุ้นโชค</span>
+                  </div>
+                </div>
+
+                <nav className="hidden md:flex items-center gap-1 bg-stone-100 p-1.5 rounded-2xl border border-stone-200">
+                  <button onClick={() => setActiveTab('entry')} className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${activeTab === 'entry' ? 'bg-white text-stone-900 shadow-sm font-bold' : 'text-stone-600 hover:text-stone-900'}`}>
+                    บันทึกรับสิทธิ์
+                  </button>
+                  <button onClick={() => setActiveTab('prizes')} className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${activeTab === 'prizes' ? 'bg-white text-stone-900 shadow-sm font-bold' : 'text-stone-600 hover:text-stone-900'}`}>
+                    ของรางวัล (15+ รายการ)
+                  </button>
+                  <button onClick={() => setActiveTab('draw')} className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${activeTab === 'draw' ? 'bg-white text-stone-900 shadow-sm font-bold' : 'text-stone-600 hover:text-stone-900'}`}>
+                    วงล้อสุ่มโชค 🎲
+                  </button>
+                  <button onClick={() => setActiveTab('leaderboard')} className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${activeTab === 'leaderboard' ? 'bg-white text-stone-900 shadow-sm font-bold' : 'text-stone-600 hover:text-stone-900'}`}>
+                    ตารางสิทธิ์ (Live Entries)
+                  </button>
+                </nav>
+
+                <div className="flex items-center gap-3">
+                  <div className="hidden lg:flex items-center gap-2 px-3.5 py-1.5 bg-amber-50 border border-amber-200 rounded-full">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                    <span className="text-xs font-semibold text-amber-900">สิทธิ์สะสม: <strong className="text-amber-700">{totalActiveTickets}</strong> สิทธิ์</span>
+                  </div>
+                  <button onClick={() => setSoundEnabled(!soundEnabled)} className="p-2.5 rounded-xl border border-stone-200 bg-white text-stone-600 hover:bg-stone-50">
+                    {soundEnabled ? "🔊" : "🔇"}
+                  </button>
+                </div>
+
+              </div>
+
+              {/* Mobile Bar */}
+              <div className="md:hidden flex items-center gap-2 py-2 overflow-x-auto no-scrollbar border-t border-stone-100 text-xs">
+                <button onClick={() => setActiveTab('entry')} className={`px-3 py-1.5 rounded-xl whitespace-nowrap ${activeTab === 'entry' ? 'bg-amber-400 font-bold text-stone-950' : 'bg-stone-100 text-stone-600'}`}>บันทึกรับสิทธิ์</button>
+                <button onClick={() => setActiveTab('prizes')} className={`px-3 py-1.5 rounded-xl whitespace-nowrap ${activeTab === 'prizes' ? 'bg-amber-400 font-bold text-stone-950' : 'bg-stone-100 text-stone-600'}`}>ของรางวัล</button>
+                <button onClick={() => setActiveTab('draw')} className={`px-3 py-1.5 rounded-xl whitespace-nowrap ${activeTab === 'draw' ? 'bg-amber-400 font-bold text-stone-950' : 'bg-stone-100 text-stone-600'}`}>วงล้อสุ่มโชค</button>
+                <button onClick={() => setActiveTab('leaderboard')} className={`px-3 py-1.5 rounded-xl whitespace-nowrap ${activeTab === 'leaderboard' ? 'bg-amber-400 font-bold text-stone-950' : 'bg-stone-100 text-stone-600'}`}>ตารางสิทธิ์</button>
+              </div>
+            </div>
+          </header>
+
+          {/* Hero Section */}
+          <section className="pt-8 pb-12 bg-gradient-to-b from-amber-50 via-stone-50 to-transparent">
+            <div className="max-w-7xl mx-auto px-4 text-center">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-amber-300 shadow-xs mb-6">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                <span className="text-xs sm:text-sm font-bold text-stone-800">โครงการรณรงค์วินัยจราจร มข. (ระบบสุ่มกาชา: เกลือ 80% | รางวัล 20%)</span>
+              </div>
+              <h1 className="text-3xl sm:text-5xl font-black text-stone-900 tracking-tight leading-tight mb-5">
+                ใส่หมวกกันน็อกเข้า <span className="text-amber-500 underline decoration-amber-300 decoration-wavy">มข. ปลอดภัย</span> ทุกเส้นทาง พร้อมสะสมสิทธิ์ลุ้นรับรางวัลใหญ่
+              </h1>
+              <p className="text-sm sm:text-base text-stone-600 max-w-2xl mx-auto mb-8">
+                สวมหมวกนิรภัยมาตรฐาน มอก. แล้วบันทึกรับสิทธิ์ลุ้นรับ Nintendo Switch, กันพลา Bandai, Keychron, Uniqlo, KFC, Starbucks และหมวก มข. (ระวังเรทเกลือ 80% นะจ๊ะ!)
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 mb-10">
+                <button onClick={() => setActiveTab('entry')} className="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-stone-950 font-black shadow-lg shadow-amber-400/25">
+                  🛡️ บันทึกการสวมหมวก & รับ 1 สิทธิ์
+                </button>
+                <button onClick={() => setActiveTab('draw')} className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-white hover:bg-stone-50 text-stone-800 font-bold border border-stone-200">
+                  🎲 วงล้อสุ่มโชค (ท้าทายเกลือ 80%)
+                </button>
+              </div>
+
+              {/* Metric Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto text-left">
+                <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-xs">
+                  <div className="text-3xl font-black text-stone-900">1,428 <span className="text-sm text-stone-500 font-semibold">ครั้ง</span></div>
+                  <div className="text-xs sm:text-sm text-stone-500 mt-1 font-medium">จำนวนครั้งที่สวมหมวกกันน็อกวันนี้</div>
+                  <div className="text-[11px] text-emerald-600 font-bold mt-2">+248 ครั้ง จากจุดคัดกรอง มข.</div>
+                </div>
+                <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-xs">
+                  <div className="text-3xl font-black text-stone-900">{486 + totalActiveTickets} <span className="text-sm text-stone-500 font-semibold">สิทธิ์</span></div>
+                  <div className="text-xs sm:text-sm text-stone-500 mt-1 font-medium">จำนวนสิทธิ์สะสมทั้งหมดในระบบ</div>
+                  <div className="text-[11px] text-amber-600 font-bold mt-2">พร้อมลุ้นของรางวัลกว่า 15+ รายการ</div>
+                </div>
+                <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-xs">
+                  <div className="text-3xl font-black text-stone-900">{24 + winners.length} <span className="text-sm text-stone-500 font-semibold">ชิ้น</span></div>
+                  <div className="text-xs sm:text-sm text-stone-500 mt-1 font-medium">ของรางวัลที่แจกไปแล้ว</div>
+                  <div className="text-[11px] text-stone-500 font-bold mt-2">มูลค่ารวมกว่า 45,000 บาท</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* MAIN TAB CONTENT */}
+          <main className="flex-1 pb-16">
+            
+            {/* TAB 1: CLAIM TICKET FORM */}
+            {activeTab === 'entry' && (
+              <div className="max-w-4xl mx-auto px-4">
+                <div className="mb-6 bg-amber-50/70 p-3.5 rounded-2xl border border-amber-200 flex flex-col sm:flex-row items-center gap-2">
+                  <span className="text-xs font-bold text-amber-900 flex-shrink-0">⚡ ทดสอบด่วน (นักศึกษา มข.):</span>
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar w-full">
+                    {students.map(s => (
+                      <button key={s.id} onClick={() => { setStudentId(s.id); setFullName(s.name); setFaculty(s.faculty); setExistingUserPrompt(s); }} className="px-3 py-1 bg-white hover:bg-stone-50 border border-stone-200 rounded-xl text-xs whitespace-nowrap">
+                        {s.name} ({s.tickets} สิทธิ์)
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                  <div className="lg:col-span-7 bg-white p-6 sm:p-8 rounded-3xl border border-stone-200 shadow-sm">
+                    {existingUserPrompt && (
+                      <div className="mb-5 p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-xs">
+                        <div className="font-bold text-emerald-900">
+                          พบบัญชีเดิมในระบบ มข. • ปัจจุบันมี <strong>{existingUserPrompt.tickets} สิทธิ์</strong>
+                        </div>
+                        <span className="bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded font-bold">Active</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleAddEntry} className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-stone-700 uppercase mb-1.5">รหัสนักศึกษา (Student ID) *</label>
+                        <input
+                          type="text"
+                          required
+                          value={studentId}
+                          onChange={(e) => setStudentId(e.target.value)}
+                          placeholder="683380XXX-X"
+                          className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-2xl text-sm font-mono focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                        />
+                        <div className="text-[11px] text-stone-400 mt-1">ตัวอย่าง: <span className="font-mono font-bold text-stone-600">683380123-4</span></div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-stone-700 uppercase mb-1.5">ชื่อ - นามสกุล *</label>
+                        <input
+                          type="text"
+                          required
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          placeholder="e.g. ปฏิวัติ ทำงานจีอี"
+                          className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-2xl text-sm focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-stone-700 uppercase mb-1.5">คณะ / หน่วยงาน (Faculty / Unit) *</label>
+                        <select
+                          value={faculty}
+                          onChange={(e) => setFaculty(e.target.value)}
+                          className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-2xl text-sm font-bold text-stone-900 focus:ring-2 focus:ring-amber-400 focus:outline-none cursor-pointer"
+                        >
+                          {FACULTIES.map(f => <option key={f} value={f}>{f}</option>)}
+                        </select>
+                      </div>
+
+                      <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 text-xs text-stone-600 space-y-1">
+                        <div>✅ สวมหมวกนิรภัยและรัดสายรัดคางถูกต้องขณะเข้า มข.</div>
+                        <div>✅ หมวกได้รับมาตรฐาน มอก. หรือสากล 100%</div>
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full py-4 rounded-2xl bg-amber-400 hover:bg-amber-300 text-stone-950 font-black text-base shadow-md shadow-amber-300/40 cursor-pointer"
+                      >
+                        🛡️ ยืนยันการขับขี่ปลอดภัย รับ 1 สิทธิ์
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Right Mock Camera */}
+                  <div className="lg:col-span-5 bg-white p-5 rounded-3xl border border-stone-200 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between text-xs font-bold text-stone-800">
+                      <span>📷 หลักฐานการสวมหมวกกันน็อก</span>
+                      <span className="text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-bold">AI Active</span>
+                    </div>
+
+                    <div className="relative aspect-4/3 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200">
+                      <img src="https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=500&q=80" alt="" className="w-full h-full object-cover" />
+                      <div className="absolute bottom-2 left-2 right-2 bg-stone-900/85 backdrop-blur-xs text-white p-2.5 rounded-xl text-xs">
+                        <div className="flex items-center justify-between font-bold text-emerald-400">
+                          <span>✅ ตรวจพบหมวกนิรภัย มอก.</span>
+                          <span className="font-mono text-[10px]">99.8%</span>
+                        </div>
+                        <div className="text-[10px] text-stone-300 mt-0.5 truncate">ผ่านเกณฑ์ความปลอดภัย ประตูมอดินแดง มข.</div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl border border-dashed border-stone-300 bg-stone-50 text-center text-xs text-stone-600">
+                      <span>📸 คลิกเพื่อเปิดกล้องถ่ายภาพ หรือลากรูปหมวกกันน็อกมาวาง</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: PRIZE POOL & SALT ZONE */}
+            {activeTab === 'prizes' && (
+              <div className="max-w-7xl mx-auto px-4">
+                <div className="text-center max-w-2xl mx-auto mb-8">
+                  <h2 className="text-2xl sm:text-4xl font-extrabold text-stone-900">คลังของรางวัลจุใจ & ตู้กาชา มข.</h2>
+                  <p className="text-sm text-stone-500 mt-2">จัดเต็มของรางวัลกว่า 15+ รายการ! ลุ้นได้ทั้งเกมมิ่ง เสื้อผ้า และของกิน</p>
+                  
+                  {/* Drop rate pill */}
+                  <div className="mt-3 inline-flex items-center gap-2 p-2 px-4 rounded-xl bg-stone-900 text-white text-xs">
+                    <span className="text-amber-400 font-bold">เรทออก:</span>
+                    <span>🧂 เกลือ 80%</span>
+                    <span>•</span>
+                    <span className="text-purple-300 font-bold">SSR 1.5%</span>
+                    <span>•</span>
+                    <span className="text-amber-300">SR 4.5%</span>
+                    <span>•</span>
+                    <span className="text-emerald-300">R 14%</span>
+                  </div>
+                </div>
+
+                {/* Filter Chips */}
+                <div className="flex items-center justify-center gap-2 mb-6 overflow-x-auto no-scrollbar">
+                  <button onClick={() => setSelectedTier('ALL')} className={`px-4 py-1.5 rounded-xl text-xs font-bold ${selectedTier === 'ALL' ? 'bg-amber-400 text-stone-950 font-black' : 'bg-white border text-stone-600'}`}>ทั้งหมด ({prizes.length})</button>
+                  <button onClick={() => setSelectedTier('SSR')} className={`px-4 py-1.5 rounded-xl text-xs font-bold ${selectedTier === 'SSR' ? 'bg-purple-600 text-white' : 'bg-white border text-purple-700'}`}>🔥 SSR Jackpot</button>
+                  <button onClick={() => setSelectedTier('SR')} className={`px-4 py-1.5 rounded-xl text-xs font-bold ${selectedTier === 'SR' ? 'bg-amber-500 text-stone-950' : 'bg-white border text-amber-800'}`}>✨ SR พรีเมียม</button>
+                  <button onClick={() => setSelectedTier('R')} className={`px-4 py-1.5 rounded-xl text-xs font-bold ${selectedTier === 'R' ? 'bg-emerald-600 text-white' : 'bg-white border text-emerald-800'}`}>🎫 R ยอดนิยม</button>
+                  <button onClick={() => setSelectedTier('SALT')} className={`px-4 py-1.5 rounded-xl text-xs font-bold ${selectedTier === 'SALT' ? 'bg-stone-800 text-white' : 'bg-white border text-stone-600'}`}>🧂 โซนเกลือ 80%</button>
+                </div>
+
+                {selectedTier !== 'SALT' ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {filteredPrizes.map(p => (
+                      <div key={p.id} className="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden flex flex-col justify-between">
+                        <div className="relative aspect-4/3 overflow-hidden bg-stone-100">
+                          <img src={p.image} alt="" className="w-full h-full object-cover" />
+                          <div className="absolute top-2 left-2">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-400 text-stone-950">{p.tier || 'R'}</span>
+                          </div>
+                          <div className="absolute top-2 right-2 shadow-md rounded-lg overflow-hidden">
+                            <BrandBadge brand={p.brand} />
+                          </div>
+                          <div className="absolute bottom-2 left-2 text-white">
+                            <div className="text-[9px] uppercase font-bold text-amber-300">มูลค่า</div>
+                            <div className="text-sm font-black">{p.value.toLocaleString()} {p.unit}</div>
+                          </div>
+                          <div className="absolute bottom-2 right-2">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white">เหลือ {p.remaining}/{p.total}</span>
+                          </div>
+                        </div>
+
+                        <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2">
+                          <div>
+                            <div className="text-[10px] font-bold text-stone-400 uppercase">{p.brand}</div>
+                            <h3 className="text-xs font-extrabold text-stone-900 line-clamp-2 leading-snug">{p.name}</h3>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setSelectedPrizeId(p.id);
+                              setActiveTab('draw');
+                              showToast(`🎯 เลือกรางวัล ${p.name} พร้อมเริ่มสุ่ม!`);
+                            }}
+                            className="w-full py-2 px-3 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-400 text-amber-900 hover:text-stone-950 border border-amber-200 transition-all cursor-pointer"
+                          >
+                            เลือกลุ้นชิ้นนี้ →
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {SALT_ITEMS.map(s => (
+                      <div key={s.id} className="p-4 rounded-3xl bg-white border border-stone-200 space-y-2">
+                        <div className="text-2xl">🧂</div>
+                        <div className="font-black text-sm text-stone-900">{s.name}</div>
+                        <p className="text-xs text-stone-500 italic">"{s.meme}"</p>
+                        <div className="text-[11px] font-semibold text-emerald-700">{s.consolation}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 3: LUCKY DRAW WITH 80% SALT */}
+            {activeTab === 'draw' && (
+              <div className="max-w-2xl mx-auto px-4">
+                
+                {/* Active Student Selector */}
+                <div className="mb-6 bg-white p-4 rounded-3xl border border-stone-200 shadow-xs">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>👤 เลือกนักศึกษาที่จะใช้สิทธิ์สุ่มกาชา:</span>
+                    </span>
+                    <span className="text-xs text-amber-800 font-bold">
+                      {eligibleStudents.length} คนที่มีสิทธิ์
+                    </span>
+                  </div>
+
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                    {eligibleStudents.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        disabled={isDrawing}
+                        onClick={() => setSelectedStudentId(s.id)}
+                        className={`p-2 px-3 rounded-2xl border text-left transition-all flex items-center gap-2.5 flex-shrink-0 cursor-pointer ${
+                          selectedStudentId === s.id
+                            ? 'bg-amber-400 text-stone-950 font-bold border-amber-500 shadow-xs'
+                            : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'
+                        }`}
+                      >
+                        <img src={s.avatar} alt="" className="w-7 h-7 rounded-xl object-cover flex-shrink-0" />
+                        <div className="text-xs leading-tight">
+                          <div className="truncate font-extrabold">{s.name}</div>
+                          <div className={`text-[10px] ${selectedStudentId === s.id ? 'text-stone-800' : 'text-stone-500'}`}>
+                            มี <strong>{s.tickets} สิทธิ์</strong>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {activeStudent && (
+                    <div className="mt-3 pt-2.5 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500">
+                      <span>กำลังใช้สิทธิ์ของ: <strong className="text-stone-900 font-bold">{activeStudent.name}</strong> ({activeStudent.id})</span>
+                      <span className="font-extrabold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md">
+                        สิทธิ์คงเหลือ: {activeStudent.tickets} สิทธิ์
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Main Gacha Slot Arena */}
+                <div className="bg-white rounded-3xl border border-stone-200 shadow-xl p-6 sm:p-8 relative text-center">
+                  <div className={`p-6 sm:p-8 rounded-3xl border-2 transition-all ${
+                    isDrawing ? 'border-amber-400 bg-amber-50/50 ring-4 ring-amber-300/40' : 'border-stone-200 bg-stone-50/60'
+                  }`}>
+                    
+                    <div className="flex justify-center mb-4">
+                      {isDrawing ? (
+                        <span className="inline-block px-4 py-1.5 rounded-full bg-amber-400 text-stone-950 font-black text-xs animate-pulse">
+                          กำลังหมุนสุ่มของรางวัล... ลุ้นเกลือหรือแจ็กพอต!
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold text-stone-500">
+                          สุ่มของรางวัล (เรทเกลือ 80% 🧂 | รางวัล 20% 🎁)
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Spinning Item Card */}
+                    {displayItem && (
+                      <div className="space-y-4">
+                        <div className="relative w-44 h-44 sm:w-52 sm:h-52 mx-auto rounded-3xl overflow-hidden border-4 border-white shadow-lg bg-stone-100 flex items-center justify-center">
+                          {displayItem.type === 'salt' ? (
+                            <div className="w-full h-full bg-gradient-to-br from-stone-100 via-stone-200 to-stone-300 flex flex-col items-center justify-center p-4">
+                              <span className="text-6xl mb-2">🧂</span>
+                              <span className="text-xs font-black text-stone-700 bg-white/80 px-2.5 py-0.5 rounded-full">
+                                {displayItem.tag || "เกลือแท้ 100%"}
+                              </span>
+                            </div>
+                          ) : (
+                            <img src={displayItem.image} alt={displayItem.name} className="w-full h-full object-cover" />
+                          )}
+
+                          <div className="absolute top-2 left-2">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase shadow-xs ${
+                              displayItem.tier === 'SSR' ? 'bg-purple-600 text-white' : displayItem.type === 'salt' ? 'bg-stone-800 text-white' : 'bg-amber-400 text-stone-950'
+                            }`}>
+                              {displayItem.tier || 'R'}
+                            </span>
+                          </div>
+
+                          {displayItem.type !== 'salt' && (
+                            <div className="absolute top-2 right-2 shadow-xs rounded-lg overflow-hidden">
+                              <BrandBadge brand={displayItem.brand} />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="text-xs font-bold text-stone-400 uppercase">
+                            {displayItem.type === 'salt' ? 'ไอเทมปลอบใจ' : displayItem.brand}
+                          </div>
+                          <h3 className="text-xl font-black text-stone-900 tracking-tight">
+                            {displayItem.name}
+                          </h3>
+                          {displayItem.type !== 'salt' && displayItem.value > 0 ? (
+                            <div className="text-sm font-extrabold text-amber-700">
+                              มูลค่า {displayItem.value.toLocaleString()} {displayItem.unit}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-stone-500 italic max-w-sm mx-auto">
+                              "{displayItem.meme || "ความเค็มระดับตำนาน แต่ขับขี่ปลอดภัย 100%"}"
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Buttons */}
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-6">
+                    <button
+                      onClick={handleStartDraw}
+                      disabled={isDrawing || !activeStudent || activeStudent.tickets <= 0}
+                      className={`w-full sm:w-auto px-10 py-4 rounded-2xl font-black text-lg transition-all shadow-lg cursor-pointer ${
+                        isDrawing ? 'bg-amber-300 text-stone-800' : !activeStudent || activeStudent.tickets <= 0 ? 'bg-stone-200 text-stone-400 cursor-not-allowed' : 'bg-amber-400 hover:bg-amber-300 text-stone-950 shadow-amber-400/30'
+                      }`}
+                    >
+                      {isDrawing ? 'กำลังหมุนสุ่ม...' : '🎲 กดสุ่มของรางวัล (ใช้ 1 สิทธิ์)'}
+                    </button>
+                  </div>
+
+                  {/* Debug toggle */}
+                  <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-center gap-2 text-xs text-stone-400">
+                    <span>⚙️ โหมดทดสอบระบบ:</span>
+                    <button
+                      onClick={() => setGuaranteeWinMode(!guaranteeWinMode)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold ${guaranteeWinMode ? 'bg-emerald-500 text-white' : 'bg-stone-100 text-stone-600'}`}
+                    >
+                      {guaranteeWinMode ? '✓ ล็อคให้ได้รางวัลจริง 100% (Debug ON)' : 'เรทปกติ (เกลือ 80% / ได้ 20%)'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+                      className={`w-full sm:w-auto px-10 py-4 rounded-2xl font-black text-lg transition-all shadow-lg cursor-pointer ${
+                        isDrawing ? 'bg-amber-300 text-stone-800' : 'bg-amber-400 hover:bg-amber-300 text-stone-950 shadow-amber-400/30'
+                      }`}
+                    >
+                      {isDrawing ? 'กำลังลุ้น...' : '🎲 เริ่มสุ่มรางวัลประจำสัปดาห์ (ลุ้น 20%)'}
+                    </button>
+                  </div>
+
+                  {/* Debug toggle */}
+                  <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-center gap-2 text-xs text-stone-400">
+                    <span>⚙️ โหมดทดสอบระบบ:</span>
+                    <button
+                      onClick={() => setGuaranteeWinMode(!guaranteeWinMode)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold ${guaranteeWinMode ? 'bg-emerald-500 text-white' : 'bg-stone-100 text-stone-600'}`}
+                    >
+                      {guaranteeWinMode ? '✓ ล็อคให้ได้รางวัล 100% (Debug ON)' : 'เรทปกติ (เกลือ 80% / ได้ 20%)'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: LIVE ENTRIES TABLE */}
+            {activeTab === 'leaderboard' && (
+              <div className="max-w-7xl mx-auto px-4">
+                <div className="flex justify-center mb-8">
+                  <div className="bg-stone-200/70 p-1.5 rounded-2xl flex items-center gap-1">
+                    <button
+                      onClick={() => setActiveSubTab('students')}
+                      className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold ${activeSubTab === 'students' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600'}`}
+                    >
+                      ประวัติผู้ได้รับสิทธิ์ทั้งหมด ({students.length})
+                    </button>
+                    <button
+                      onClick={() => setActiveSubTab('winners')}
+                      className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold ${activeSubTab === 'winners' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600'}`}
+                    >
+                      ทำเนียบผู้ได้รับรางวัล มข. ({winners.length})
+                    </button>
+                  </div>
+                </div>
+
+                {activeSubTab === 'students' ? (
+                  <div className="bg-white rounded-3xl border border-stone-200 p-6 sm:p-8">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="🔍 ค้นหารหัสนักศึกษา เช่น 683380... หรือชื่อ"
+                        className="w-full md:w-88 px-4 py-2.5 bg-stone-50 border border-stone-200 rounded-2xl text-xs sm:text-sm font-mono"
+                      />
+                      <div className="flex gap-1.5 overflow-x-auto no-scrollbar w-full md:w-auto">
+                        {['ALL', ...Array.from(new Set(students.map(s => s.faculty)))].map(f => (
+                          <button
+                            key={f}
+                            onClick={() => setSelectedFacultyFilter(f)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap ${selectedFacultyFilter === f ? 'bg-amber-400 font-bold' : 'bg-stone-100 text-stone-600'}`}
+                          >
+                            {f === 'ALL' ? 'ทุกคณะใน มข.' : f.includes('วิทยาลัยการคอมพิวเตอร์') ? '💻 วิทยาลัยการคอมพิวเตอร์' : f.replace('คณะ', '')}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs sm:text-sm">
+                        <thead>
+                          <tr className="border-b border-stone-100 text-[11px] text-stone-400 font-bold uppercase">
+                            <th className="py-3 px-4">วันที่ / เวลา</th>
+                            <th className="py-3 px-4">รหัสนักศึกษา</th>
+                            <th className="py-3 px-4">ชื่อ - นามสกุล</th>
+                            <th className="py-3 px-4">สังกัด (คณะ / วิทยาลัย)</th>
+                            <th className="py-3 px-4 text-center">สิทธิ์สะสม</th>
+                            <th className="py-3 px-4">สถานะการตรวจรับรอง</th>
+                            <th className="py-3 px-4 text-right">ดำเนินการ</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-100">
+                          {filteredStudents.map((s) => (
+                            <tr key={s.id} className="hover:bg-amber-50/30">
+                              <td className="py-3.5 px-4 text-stone-500 whitespace-nowrap text-xs">{s.lastCheckIn}</td>
+                              <td className="py-3.5 px-4 font-mono font-bold text-stone-900">
+                                <span className="bg-stone-100 px-2 py-0.5 rounded border border-stone-200">{s.id}</span>
+                              </td>
+                              <td className="py-3.5 px-4 font-extrabold text-stone-900 whitespace-nowrap">{s.name}</td>
+                              <td className="py-3.5 px-4 text-stone-700 font-medium">{s.faculty}</td>
+                              <td className="py-3.5 px-4 text-center">
+                                <span className="px-3 py-1 rounded-xl bg-amber-100 text-amber-950 font-black text-sm">
+                                  {s.tickets} สิทธิ์
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4 whitespace-nowrap">
+                                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  ✅ อนุมัติแล้ว (Verified)
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4 text-right">
+                                <button
+                                  onClick={() => handleQuickAdd(s.id)}
+                                  className="px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-amber-400 text-stone-800 text-xs font-bold"
+                                >
+                                  +1 สิทธิ์
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-3xl border border-stone-200 p-6 sm:p-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {winners.map(w => (
+                        <div key={w.id} className="p-4 rounded-2xl bg-stone-50 border border-stone-200 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <BrandBadge brand={w.prizeBrand} />
+                              <div className="font-bold text-xs text-stone-900">{w.prizeName}</div>
+                            </div>
+                            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">{w.status}</span>
+                          </div>
+                          <div className="text-xs pt-1 border-t border-stone-200">
+                            <div className="font-bold text-stone-900">{w.studentName}</div>
+                            <div className="text-[11px] text-stone-500 font-mono">รหัส: {w.studentId} • {w.faculty}</div>
+                          </div>
+                          <div className="text-[10px] text-stone-400">{w.date}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+          </main>
+
+          {/* Winner Modal (20% Win) */}
+          {recentWinner && recentPrize && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/65 backdrop-blur-xs">
+              <div className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl border border-stone-200">
+                <div className="bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 p-6 text-center text-stone-950">
+                  <div className="text-3xl mb-1">🎉</div>
+                  <h3 className="text-2xl font-black">ขอแสดงความยินดีด้วย!</h3>
+                  <p className="text-xs font-bold text-stone-800">ทะลุเรทเกลือ 80% ได้รางวัลใหญ่สำเร็จ!</p>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="flex items-center gap-3 p-3 bg-stone-50 rounded-2xl border border-stone-200">
+                    <img src={recentWinner.avatar} alt="" className="w-14 h-14 rounded-xl object-cover border-2 border-amber-400" />
+                    <div>
+                      <div className="text-xs font-mono font-bold text-amber-800">รหัสนักศึกษา: {recentWinner.id}</div>
+                      <div className="text-base font-black text-stone-900">{recentWinner.name}</div>
+                      <div className="text-xs font-semibold text-stone-600">{recentWinner.faculty}</div>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <BrandBadge brand={recentPrize.brand} />
+                      <div>
+                        <div className="text-xs font-bold text-stone-500 uppercase">ของรางวัลที่ได้รับ</div>
+                        <div className="text-sm font-extrabold text-stone-900">{recentPrize.name}</div>
+                        <div className="text-xs text-amber-700 font-semibold">{recentPrize.value.toLocaleString()} {recentPrize.unit} ({recentPrize.brand})</div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">ตัดสิทธิ์ 1 สิทธิ์แล้ว</span>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={() => {
+                        const txt = `🎉 ยินดีด้วยกับ ${recentWinner.name} (รหัส ${recentWinner.id}) สังกัด ${recentWinner.faculty} ทะลุเรทเกลือ 80% ได้รับรางวัล ${recentPrize.name} ในโครงการ KKU Helmet Hero!`;
+                        if (navigator.clipboard) { navigator.clipboard.writeText(txt); alert("คัดลอกข้อความประกาศผลรางวัลแล้ว!"); }
+                      }}
+                      className="w-1/2 py-2.5 rounded-xl border border-stone-300 font-bold text-xs cursor-pointer"
+                    >
+                      📢 แชร์ผลรางวัล
+                    </button>
+                    <button
+                      onClick={() => { setRecentWinner(null); setRecentPrize(null); }}
+                      className="w-1/2 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-stone-950 font-bold text-xs cursor-pointer"
+                    >
+                      เสร็จสิ้น & สุ่มต่อ
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Salt Modal (80% Salt!) */}
+          {recentSalt && recentSaltStudent && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/70 backdrop-blur-xs">
+              <div className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl border border-stone-200">
+                <div className="bg-gradient-to-r from-stone-700 via-stone-800 to-stone-900 p-6 text-center text-white">
+                  <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center mx-auto mb-2 text-2xl">🧂</div>
+                  <span className="bg-amber-400 text-stone-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">เรทเกลือ 80% ทำงาน!</span>
+                  <h3 className="text-2xl font-black mt-2">ได้รับความเค็มระดับตำนาน!</h3>
+                  <p className="text-xs text-stone-300">ถึงรอบนี้จะเกลือ แต่สวมหมวกนิรภัย ปลอดภัยแน่นอน</p>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200 space-y-1.5">
+                    <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">{recentSalt.tag}</span>
+                    <div className="font-black text-sm text-stone-900">{recentSalt.name}</div>
+                    <p className="text-xs text-stone-600 italic">"{recentSalt.meme}"</p>
+                    <div className="text-[11px] font-semibold text-emerald-700 pt-1 border-t">{recentSalt.consolation}</div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-amber-50 rounded-xl text-xs">
+                    <div className="font-bold text-stone-900">{recentSaltStudent.name} ({recentSaltStudent.id})</div>
+                    <div className="text-amber-800 font-extrabold">สิทธิ์เหลือ: {students.find(s => s.id === recentSaltStudent.id)?.tickets ?? 0} สิทธิ์</div>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={() => {
+                        const txt = `🧂 ได้รับเกลือ! ${recentSaltStudent.name} สุ่มได้ "${recentSalt.name}" ใน KKU Helmet Hero! ขับขี่ปลอดภัย 100% แต่เค็มจัด!`;
+                        if (navigator.clipboard) { navigator.clipboard.writeText(txt); alert("คัดลอกมุกเกลือแล้ว!"); }
+                      }}
+                      className="w-1/2 py-2.5 rounded-xl border border-stone-300 text-stone-700 font-bold text-xs"
+                    >
+                      📢 แชร์ความเค็ม
+                    </button>
+                    <button
+                      onClick={() => { setRecentSalt(null); setRecentSaltStudent(null); }}
+                      className="w-1/2 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-stone-950 font-bold text-xs"
+                    >
+                      ยอมรับความเค็ม & ลุ้นใหม่
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <footer className="mt-auto border-t border-stone-200 bg-white py-8 text-stone-600">
+            <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+              <div>🛡️ KKU Helmet Hero: มหาวิทยาลัยขอนแก่น © 2026 • วิทยาลัยการคอมพิวเตอร์</div>
+              <button
+                onClick={() => {
+                  try {
+                    localStorage.removeItem('kku_safe_ride_students_v3');
+                    localStorage.removeItem('kku_safe_ride_prizes_v3');
+                    localStorage.removeItem('kku_safe_ride_winners_v3');
+                  } catch(e){}
+                  setStudents(INITIAL_STUDENTS);
+                  setPrizes(INITIAL_PRIZES);
+                  setWinners(INITIAL_WINNERS);
+                  setSelectedPrizeId(INITIAL_PRIZES[0].id);
+                  showToast("🔄 รีเซ็ตข้อมูลตัวอย่าง มข. เรียบร้อยแล้ว");
+                }}
+                className="px-3 py-1.5 rounded-xl text-stone-600 hover:text-stone-950 bg-stone-100 border border-stone-200 cursor-pointer"
+              >
+                🔄 รีเซ็ตข้อมูลตัวอย่างกลับเป็นค่าเริ่มต้น
+              </button>
+            </div>
+          </footer>
+
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
